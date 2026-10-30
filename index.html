@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>제주 역사문화 조회</title>
+  <style>
+    :root { --accent: #0e8f9c; --accent-dark: #0a6f79; --bg: #f4f8fa; --card: #fff; --line: #e1e8ed; --muted: #6b7c8a; --jeju: #e8590c; --seogwipo: #1c7ed6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, 'Malgun Gothic', sans-serif; background: var(--bg); color: #1f2d3a; line-height: 1.55; }
+    header { padding: 2rem 1rem; background: linear-gradient(135deg, #26c6da, #0277bd); color: #fff; text-align: center; }
+    header h1 { margin: 0 0 .25rem; font-size: 1.8rem; }
+    header p { margin: 0; opacity: .9; }
+    main { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    .filters { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: .6rem; margin-bottom: .75rem; }
+    @media (max-width: 800px) { .filters { grid-template-columns: 1fr 1fr; } .filters input { grid-column: 1 / -1; } }
+    input, select, button { font: inherit; padding: .55em .75em; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: inherit; }
+    button { cursor: pointer; background: var(--accent); color: #fff; border-color: transparent; }
+    button:hover { background: var(--accent-dark); }
+
+    /* 지도 (CSV의 위도/경도만으로 직접 그림) */
+    .mapbox { position: relative; height: 480px; margin-bottom: .5rem; overflow: hidden; background: #eaf4f8; border: 1px solid var(--line); border-radius: 14px; user-select: none; }
+    .mapbox svg { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+    .mapbox svg.drag { cursor: grabbing; }
+    .map-ctrl { position: absolute; top: .6rem; right: .6rem; display: flex; flex-direction: column; gap: .3rem; }
+    .map-ctrl button { padding: .25em .6em; font-size: 1rem; background: #fff; color: #1f2d3a; border: 1px solid var(--line); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .map-ctrl button:hover { background: #eef6f8; }
+    .legend { position: absolute; left: .6rem; bottom: .6rem; padding: .35rem .7rem; background: rgba(255,255,255,.92); border-radius: 8px; font-size: .8rem; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .legend i { display: inline-block; width: .7rem; height: .7rem; margin: 0 .25rem 0 .5rem; border-radius: 50%; vertical-align: -1px; }
+    .legend i:first-child { margin-left: 0; }
+    .infobox { position: absolute; top: .6rem; left: .6rem; width: min(320px, calc(100% - 4.5rem)); max-height: calc(100% - 1.2rem); overflow-y: auto; padding: .85rem 1rem; background: #fff; border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.25); display: none; }
+    .infobox.open { display: block; }
+    .infobox h4 { margin: 0 0 .25rem; font-size: 1.05rem; padding-right: 1.5rem; }
+    .infobox p { margin: .3rem 0; font-size: .86rem; }
+    .infobox .desc { color: #44525e; }
+    .infobox .x { position: absolute; top: .35rem; right: .45rem; padding: .05em .45em; background: transparent; color: var(--muted); font-size: 1.1rem; }
+    .infobox .x:hover { background: #eef3f6; }
+    .infobox .more { margin-top: .4rem; padding: .3em .8em; font-size: .85rem; }
+
+    .count { margin: .5rem 0 1rem; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: .9rem; }
+    .card { padding: 1rem 1.1rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0, 0, 0, .1); }
+    .card { position: relative; }
+    .card h3 { margin: .2rem 0; padding-right: 2.4rem; font-size: 1.1rem; }
+    .favbtn { position: absolute; top: .6rem; right: .7rem; width: 2rem; height: 2rem; padding: 0; border-radius: 50%; background: #fff; color: #868e96; border: 1px solid var(--line); font-size: 1.15rem; line-height: 1; }
+    .favbtn:hover { background: #fff0f0; color: #e03131; }
+    .favbtn.on { background: #ffe3e3; color: #e03131; border-color: #ffc9c9; }
+    .infobox .favbtn { position: static; width: auto; height: auto; margin-left: .4rem; padding: .3em .7em; border-radius: 8px; font-size: .85rem; }
+    .course { margin: .75rem 0 1rem; padding: 1rem 1.2rem; background: #f3f0ff; border: 1px solid #d0bfff; border-radius: 14px; }
+    .course h3 { margin: 0 0 .5rem; font-size: 1.05rem; color: #5f3dc4; }
+    .course h3 small { color: var(--muted); font-weight: normal; margin-left: .4rem; }
+    .course p.hint { margin: 0; color: var(--muted); font-size: .9rem; }
+    .course ol { margin: 0 0 .6rem; padding: 0; list-style: none; }
+    .course li { display: flex; align-items: center; gap: .5rem; padding: .35rem 0; border-bottom: 1px dashed #d0bfff; font-size: .92rem; }
+    .course .no { flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #7048e8; color: #fff; text-align: center; font-size: .8rem; line-height: 1.5rem; }
+    .course .nm { flex: 1; cursor: pointer; text-decoration: underline dotted; }
+    .course .leg { color: var(--muted); font-size: .8rem; }
+    .course li button { padding: .1em .5em; background: #fff; color: #5f3dc4; border: 1px solid #d0bfff; font-size: .85rem; }
+    .course li button:hover:not(:disabled) { background: #e5dbff; }
+    .course li button:disabled { opacity: .35; cursor: default; }
+    .course .acts { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .course .acts button { background: #7048e8; font-size: .88rem; }
+    .course .acts button.ghost { background: #fff; color: #5f3dc4; border: 1px solid #d0bfff; }
+    .card .addr { margin: 0 0 .4rem; color: var(--muted); font-size: .85rem; }
+    .card .title { margin: 0 0 .4rem; font-size: .92rem; }
+    .tags span, .tag { display: inline-block; margin: 0 .3rem .2rem 0; padding: .05rem .55rem; border-radius: 999px; background: #e0f4f6; color: var(--accent-dark); font-size: .78rem; }
+    .empty { padding: 2rem; text-align: center; color: var(--muted); }
+    .overlay { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .5); }
+    .overlay.open { display: flex; }
+    .modal { width: 100%; max-width: 760px; max-height: 90vh; overflow-y: auto; padding: 1.5rem; background: #fff; border-radius: 16px; }
+    .modal h2 { margin: 0 0 .25rem; }
+    .modal dl { display: grid; grid-template-columns: 110px 1fr; gap: .35rem .75rem; margin: 1rem 0; font-size: .92rem; }
+    .modal dt { color: var(--muted); }
+    .modal dd { margin: 0; word-break: break-all; }
+    .modal .content { white-space: pre-wrap; padding: .9rem; background: #f6f9fb; border-radius: 10px; font-size: .92rem; }
+    .modal .actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1rem; }
+    .modal a.btn { padding: .5em .9em; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-size: .9rem; }
+    footer { padding: 1.5rem; text-align: center; color: var(--muted); font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🏛️ 제주 역사문화 조회</h1>
+    <p>제주특별자치도 제주역사문화 위치정보 + 일반정보 (2022-12-09 기준)</p>
+    <p style="margin-top:.6rem"><a href="stamp.html" style="display:inline-block;padding:.4em 1em;border-radius:999px;background:#fff;color:#b02a37;text-decoration:none;font-weight:700">🏯 스탬프 투어 시작하기 →</a></p>
+  </header>
+
+  <main>
+    <section class="filters">
+      <input id="q" type="search" placeholder="장소명, 제목, 주소, 내용으로 검색" />
+      <select id="region"><option value="">전체 지역</option></select>
+      <select id="category"><option value="">전체 분류</option></select>
+      <select id="dir1"><option value="">전체 디렉토리</option></select>
+      <select id="sort">
+        <option value="name">장소명순</option>
+        <option value="id">고유번호순</option>
+        <option value="region">지역순</option>
+      </select>
+    </section>
+
+    <div class="mapbox" id="mapbox">
+      <svg id="map" role="img" aria-label="위도/경도로 그린 제주 역사문화 위치 지도"></svg>
+      <div class="map-ctrl">
+        <button id="zin" title="확대">＋</button>
+        <button id="zout" title="축소">－</button>
+        <button id="zfit" title="전체 보기">⤢</button>
+      </div>
+      <div class="legend"><i style="background:var(--jeju)"></i>제주시<i style="background:var(--seogwipo)"></i>서귀포시<br /><span style="color:var(--muted)">초록 영역 = 제주도 (행정구역 경계)</span></div>
+      <div class="infobox" id="infobox"></div>
+    </div>
+
+    <section class="course" id="course"></section>
+
+    <p class="count" id="count"></p>
+    <section class="grid" id="list"></section>
+  </main>
+
+  <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+  <footer>데이터 출처: 제주특별자치도 · 이 폴더의 index.html · config.js · api.js · data.js · coast.js 를 함께 두고 열어주세요.</footer>
+
+  <!-- CSV 2개를 합친 데이터. file:// 로 열어도 불러올 수 있게 script 로 읽어요. -->
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="api.js"></script>
+  <script src="coast.js"></script>
+  <script>
+    // 데이터는 api.js 가 가져와요 (API 우선, 실패하면 data.js). 가져온 뒤에 화면을 만든다.
+    ;(async () => {
+    const RAW = await JejuApi.load()
+    const data = RAW.map((d) => ({
+      ...d,
+      // "제주특별자치도 제주시 ..." 에서 시 단위를 뽑는다
+      region: (d.address.match(/(제주시|서귀포시)/) || [''])[0] || '기타',
+    }))
+
+    const $ = (id) => document.getElementById(id)
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+    if (data.length === 0) {
+      $('list').innerHTML = '<p class="empty">데이터를 불러오지 못했어요. config.js(API 설정)나 data.js(내장 데이터)를 확인하세요.</p>'
+    }
+
+    // 선택 상자 채우기
+    const fillSelect = (id, values) => {
+      const el = $(id)
+      ;[...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')).forEach((v) => {
+        el.insertAdjacentHTML('beforeend', `<option>${esc(v)}</option>`)
+      })
+    }
+    fillSelect('region', data.map((d) => d.region))
+    fillSelect('category', data.map((d) => d.category))
+    fillSelect('dir1', data.map((d) => d.dir1))
+
+    // ======================================================================
+    // 지도: 외부 지도 없이, CSV의 위도/경도를 km 단위 평면 좌표로 바꿔 SVG에 직접 그린다.
+    // ======================================================================
+    const NS = 'http://www.w3.org/2000/svg'
+    const svg = $('map')
+    const LAT0 = 33.38, LNG0 = 126.55
+    const KM_LAT = 110.57
+    const KM_LNG = 111.32 * Math.cos((LAT0 * Math.PI) / 180) // 제주 위도에서의 경도 1도 = 약 92.9km
+
+    // 장소마다 평면 좌표(x: 동쪽 km, y: 북쪽 km)를 미리 계산
+    data.forEach((d) => {
+      d.x = (d.lng - LNG0) * KM_LNG
+      d.y = (d.lat - LAT0) * KM_LAT
+    })
+
+    const view = { cx: 0, cy: 0, k: 5 } // 화면 중심(km)과 확대 비율(px/km)
+    let shown = data // 검색/필터에 걸린 장소
+    let selectedId = null
+    let K_MIN = 2, K_MAX = 900
+
+    // ---- 찜 / 나만의 답사 코스: 찜한 순서가 곧 방문 순서 (브라우저에 저장) ----
+    const FAV_KEY = 'jeju-course-v1'
+    const byId = (id) => data.find((d) => d.id === id)
+    let favs = (() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(FAV_KEY) || '[]')
+        return Array.isArray(saved) ? saved.filter((id) => byId(id)) : []
+      } catch { return [] }
+    })()
+    const saveFavs = () => { try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)) } catch { /* 저장 불가여도 동작은 계속 */ } }
+    // 두 지점 사이 거리(km, 직선)
+    const distKm = (a, b) => {
+      const R = 6371, rad = Math.PI / 180
+      const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad
+      const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2
+      return 2 * R * Math.asin(Math.sqrt(s))
+    }
+
+    const size = () => ({ w: svg.clientWidth || 800, h: svg.clientHeight || 480 })
+    const toScreen = (x, y) => {
+      const { w, h } = size()
+      return [w / 2 + (x - view.cx) * view.k, h / 2 - (y - view.cy) * view.k]
+    }
+    const toWorld = (px, py) => {
+      const { w, h } = size()
+      return [view.cx + (px - w / 2) / view.k, view.cy - (py - h / 2) / view.k]
+    }
+
+    // ---- 제주도 해안선: coast.js (행정구역 경계)를 km 평면 좌표로 변환 ----
+    const coast = (window.JEJU_COAST || []).map((ring) =>
+      ring.map(([lng, lat]) => [(lng - LNG0) * KM_LNG, (lat - LAT0) * KM_LAT]),
+    )
+    function coastPathD() {
+      return coast
+        .map((ring) => 'M' + ring.map(([x, y]) => toScreen(x, y).map((v) => v.toFixed(1)).join(',')).join('L') + 'Z')
+        .join('')
+    }
+
+    const el = (name, attrs = {}, text) => {
+      const n = document.createElementNS(NS, name)
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v)
+      if (text !== undefined) n.textContent = text
+      return n
+    }
+
+    // 보기 좋은 눈금 간격 고르기 (km)
+    const niceStep = (target) => {
+      const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50]
+      return steps.find((s) => s >= target) || 50
+    }
+
+    function draw() {
+      const { w, h } = size()
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+      svg.replaceChildren()
+
+      // 육지(제주섬) 먼저 그리고, 그 위에 눈금선과 핀을 올린다
+      svg.append(el('path', { d: coastPathD(), fill: '#dff0d3', stroke: '#6fa35b', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }))
+
+      // 눈금선 (위도/경도)
+      const [minX, maxY] = toWorld(0, 0)
+      const [maxX, minY] = toWorld(w, h)
+      const gx = niceStep(90 / view.k)
+      const grid = el('g')
+      for (let x = Math.ceil(minX / gx) * gx; x <= maxX; x += gx) {
+        const [sx] = toScreen(x, 0)
+        grid.append(el('line', { x1: sx, y1: 0, x2: sx, y2: h, stroke: '#b9d3df', 'stroke-width': 1, 'stroke-opacity': 0.6 }))
+        const lng = LNG0 + x / KM_LNG
+        grid.append(el('text', { x: sx + 3, y: h - 6, fill: '#7a8e9b', 'font-size': 10 }, `${lng.toFixed(2)}°E`))
+      }
+      for (let y = Math.ceil(minY / gx) * gx; y <= maxY; y += gx) {
+        const [, sy] = toScreen(0, y)
+        grid.append(el('line', { x1: 0, y1: sy, x2: w, y2: sy, stroke: '#b9d3df', 'stroke-width': 1, 'stroke-opacity': 0.6 }))
+        const lat = LAT0 + y / KM_LAT
+        grid.append(el('text', { x: 4, y: sy - 3, fill: '#7a8e9b', 'font-size': 10 }, `${lat.toFixed(2)}°N`))
+      }
+      svg.append(grid)
+
+      // 나만의 답사 코스: 찜한 순서대로 선으로 잇고, 구간마다 진행 방향 화살표를 둔다
+      const course = favs.map(byId).filter(Boolean).map((d) => ({ d, p: toScreen(d.x, d.y) }))
+      if (course.length >= 2) {
+        const pts = course.map((c) => c.p.map((v) => v.toFixed(1)).join(',')).join(' ')
+        svg.append(el('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-width': 7, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: 0.85 }))
+        svg.append(el('polyline', { points: pts, fill: 'none', stroke: '#7048e8', 'stroke-width': 3.5, 'stroke-dasharray': '9 6', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }))
+        for (let i = 0; i < course.length - 1; i++) {
+          const [x1, y1] = course[i].p, [x2, y2] = course[i + 1].p
+          if (Math.hypot(x2 - x1, y2 - y1) < 36) continue
+          const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI
+          svg.append(el('path', { d: 'M-6,-5 L6,0 L-6,5Z', fill: '#7048e8', stroke: '#fff', 'stroke-width': 1.5, transform: `translate(${(x1 + x2) / 2},${(y1 + y2) / 2}) rotate(${ang})` }))
+        }
+      }
+
+      // 핀: 선택된 핀을 맨 위에 그리기 위해 마지막에 정렬
+      const pins = el('g')
+      const ordered = [...shown].sort((a, b) => (a.id === selectedId) - (b.id === selectedId))
+      for (const d of ordered) {
+        const [sx, sy] = toScreen(d.x, d.y)
+        if (sx < -20 || sx > w + 20 || sy < -30 || sy > h + 20) continue
+        const color = d.region === '서귀포시' ? 'var(--seogwipo)' : d.region === '제주시' ? 'var(--jeju)' : '#868e96'
+        const sel = d.id === selectedId
+        const s = sel ? 1.35 : 1
+        const g = el('g', { transform: `translate(${sx},${sy}) scale(${s})`, style: 'cursor:pointer', 'data-id': d.id })
+        // 물방울 모양 핀 (뾰족한 끝이 좌표)
+        g.append(el('path', { d: 'M0 0 C-7 -9 -9 -13 -9 -17 A9 9 0 1 1 9 -17 C9 -13 7 -9 0 0Z', fill: color, stroke: '#fff', 'stroke-width': 1.5 }))
+        g.append(el('circle', { cx: 0, cy: -17, r: 3.2, fill: '#fff' }))
+        g.append(el('title', {}, d.name))
+        pins.append(g)
+      }
+      svg.append(pins)
+
+      // 찜한 곳에는 방문 순서 번호 배지를 단다
+      favs.forEach((id, i) => {
+        const d = byId(id)
+        if (!d) return
+        const [sx, sy] = toScreen(d.x, d.y)
+        if (sx < -20 || sx > w + 20 || sy < -40 || sy > h + 20) return
+        const g = el('g', { transform: `translate(${sx},${sy - 38})`, 'pointer-events': 'none' })
+        g.append(el('circle', { r: 10, fill: '#7048e8', stroke: '#fff', 'stroke-width': 2 }))
+        g.append(el('text', { y: 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 'bold', fill: '#fff' }, String(i + 1)))
+        svg.append(g)
+      })
+
+      // 이름 라벨: 많이 확대했을 때만 보여 겹침 방지
+      if (view.k > 60) {
+        for (const d of shown) {
+          const [sx, sy] = toScreen(d.x, d.y)
+          if (sx < 0 || sx > w || sy < 0 || sy > h) continue
+          svg.append(el('text', { x: sx + 11, y: sy - 8, 'font-size': 11, fill: '#1f2d3a', stroke: '#fff', 'stroke-width': 3, 'paint-order': 'stroke' }, d.name))
+        }
+      }
+
+      // 나침반(N) + 축척
+      const north = el('g', { transform: `translate(${w - 28},${h - 40})` })
+      north.append(el('path', { d: 'M0 -14 L7 8 L0 3 L-7 8Z', fill: '#37474f' }))
+      north.append(el('text', { x: 0, y: -18, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 'bold', fill: '#37474f' }, 'N'))
+      svg.append(north)
+
+      const km = niceStep(110 / view.k)
+      const bar = km * view.k
+      const sb = el('g', { transform: `translate(${w - bar - 56},${h - 14})` })
+      sb.append(el('path', { d: `M0 -5 V0 H${bar} V-5`, fill: 'none', stroke: '#37474f', 'stroke-width': 2 }))
+      sb.append(el('text', { x: bar / 2, y: -8, 'text-anchor': 'middle', 'font-size': 11, fill: '#37474f' }, `${km} km`))
+      svg.append(sb)
+
+      if (shown.length === 0) {
+        svg.append(el('text', { x: w / 2, y: h / 2, 'text-anchor': 'middle', 'font-size': 16, fill: '#7a8e9b' }, '조건에 맞는 장소가 없어요'))
+      }
+    }
+
+    // 보이는 장소가 모두 들어오도록 화면 맞추기
+    function fit() {
+      const { w, h } = size()
+      if (shown.length === 0) return draw()
+      const extra = shown.length === data.length ? coast.flat() : [] // 전체 보기면 섬 전체가 들어오게
+      const xs = [...shown.map((d) => d.x), ...extra.map((p) => p[0])], ys = [...shown.map((d) => d.y), ...extra.map((p) => p[1])]
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
+      view.cx = (x0 + x1) / 2
+      view.cy = (y0 + y1) / 2 + 1 // 핀이 위로 솟아 있어서 살짝 보정
+      const spanX = Math.max(x1 - x0, 0.5), spanY = Math.max(y1 - y0, 0.5)
+      view.k = Math.min(Math.min((w - 100) / spanX, (h - 120) / spanY), 250)
+      draw()
+    }
+
+    function zoomAt(factor, px, py) {
+      const { w, h } = size()
+      px ??= w / 2
+      py ??= h / 2
+      const [wx, wy] = toWorld(px, py)
+      view.k = Math.min(K_MAX, Math.max(K_MIN, view.k * factor))
+      // 마우스 아래 지점이 그대로 있도록 중심 이동
+      view.cx = wx - (px - w / 2) / view.k
+      view.cy = wy + (py - h / 2) / view.k
+      draw()
+    }
+
+    // ---- 조작: 드래그 이동, 휠 확대/축소, 핀 클릭 ----
+    let drag = null
+    svg.addEventListener('pointerdown', (e) => {
+      drag = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false }
+    })
+    svg.addEventListener('pointermove', (e) => {
+      if (!drag) return
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y
+      if (!drag.moved && Math.hypot(dx, dy) < 4) return
+      drag.moved = true
+      svg.classList.add('drag')
+      view.cx = drag.cx - dx / view.k
+      view.cy = drag.cy + dy / view.k
+      draw()
+    })
+    window.addEventListener('pointerup', (e) => {
+      const wasClick = drag && !drag.moved
+      svg.classList.remove('drag')
+      const target = e.target
+      drag = null
+      if (wasClick) {
+        const pin = target.closest && target.closest('[data-id]')
+        if (pin) selectPlace(Number(pin.dataset.id), false)
+      }
+    })
+    svg.addEventListener('wheel', (e) => {
+      e.preventDefault()
+      const r = svg.getBoundingClientRect()
+      zoomAt(e.deltaY < 0 ? 1.25 : 0.8, e.clientX - r.left, e.clientY - r.top)
+    }, { passive: false })
+    $('zin').onclick = () => zoomAt(1.5)
+    $('zout').onclick = () => zoomAt(1 / 1.5)
+    $('zfit').onclick = () => { closeInfo(); fit() }
+    window.addEventListener('resize', draw)
+
+    // ---- 핀을 누르면 뜨는 설명 ----
+    function selectPlace(id, centerMap) {
+      const d = data.find((x) => x.id === id)
+      if (!d) return
+      selectedId = id
+      const desc = d.content ? d.content.slice(0, 130) + (d.content.length > 130 ? '…' : '') : ''
+      $('infobox').innerHTML = `
+        <button class="x" id="infoClose" title="닫기">×</button>
+        <h4>${esc(d.name)}</h4>
+        <div class="tags">${[d.category, d.dir1, d.dir2].filter(Boolean).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+        ${d.title ? `<p><b>${esc(d.title)}</b></p>` : ''}
+        <p>📍 ${esc(d.address)}</p>
+        <p>🧭 ${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}</p>
+        ${desc ? `<p class="desc">${esc(desc)}</p>` : ''}
+        <button class="more" id="infoMore">자세히 보기</button><button class="favbtn" data-fav="${id}"></button>`
+      $('infobox').classList.add('open')
+      $('infoClose').onclick = closeInfo
+      $('infoMore').onclick = () => openDetail(id)
+      refreshFavButtons()
+      if (centerMap) {
+        view.cx = d.x
+        view.cy = d.y
+        view.k = Math.max(view.k, 80)
+        // 설명 상자가 왼쪽 위를 가리므로 핀을 화면 중앙 오른쪽으로 둔다
+        const { w } = size()
+        view.cx -= (w * 0.15) / view.k
+      }
+      draw()
+    }
+    function closeInfo() {
+      selectedId = null
+      $('infobox').classList.remove('open')
+      draw()
+    }
+
+    // ======================================================================
+    // 목록 + 검색/필터 (핀과 같은 결과를 공유)
+    // ======================================================================
+    function render() {
+      const q = $('q').value.trim().toLowerCase()
+      const region = $('region').value
+      const category = $('category').value
+      const dir1 = $('dir1').value
+      const sort = $('sort').value
+
+      const rows = data
+        .filter((d) => !region || d.region === region)
+        .filter((d) => !category || d.category === category)
+        .filter((d) => !dir1 || d.dir1 === dir1)
+        .filter((d) => !q || [d.name, d.title, d.subtitle, d.address, d.subject, d.content].join(' ').toLowerCase().includes(q))
+        .sort((a, b) =>
+          sort === 'id' ? a.id - b.id
+          : sort === 'region' ? a.region.localeCompare(b.region, 'ko') || a.name.localeCompare(b.name, 'ko')
+          : a.name.localeCompare(b.name, 'ko'))
+
+      // 지도: 걸러진 장소만 핀으로 남기고 화면을 맞춘다
+      shown = rows
+      if (selectedId !== null && !rows.some((d) => d.id === selectedId)) {
+        selectedId = null
+        $('infobox').classList.remove('open')
+      }
+      fit()
+
+      $('count').textContent = `총 ${data.length}건 중 ${rows.length}건 (지도의 핀도 같은 결과만 보여요)`
+      $('list').innerHTML = rows.length
+        ? rows.map((d) => `
+          <article class="card" data-id="${d.id}">
+            <button class="favbtn" data-fav="${d.id}"></button>
+            <h3>${esc(d.name)}</h3>
+            <p class="addr">📍 ${esc(d.address)}</p>
+            ${d.title ? `<p class="title">${esc(d.title)}</p>` : ''}
+            <div class="tags">
+              ${d.category ? `<span>${esc(d.category)}</span>` : ''}
+              ${d.dir1 ? `<span>${esc(d.dir1)}</span>` : ''}
+              ${d.dir2 ? `<span>${esc(d.dir2)}</span>` : ''}
+            </div>
+          </article>`).join('')
+        : '<p class="empty">검색 결과가 없어요.</p>'
+    }
+
+    function openDetail(id) {
+      const d = data.find((x) => x.id === id)
+      if (!d) return
+      const row = (label, value) => (value ? `<dt>${label}</dt><dd>${esc(value)}</dd>` : '')
+      $('modal').innerHTML = `
+        <h2>${esc(d.name)}</h2>
+        <div class="tags">
+          ${[d.category, d.dir1, d.dir2].filter(Boolean).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}
+        </div>
+        <dl>
+          ${row('고유번호', d.id)}
+          ${row('제목', d.title)}
+          ${row('부제목', d.subtitle)}
+          ${row('주소', d.address)}
+          ${row('우편번호', d.zip)}
+          ${row('위도/경도', `${d.lat}, ${d.lng}`)}
+          ${row('저작자', d.author)}
+          ${row('주제', d.subject)}
+          ${row('발행자', d.publisher)}
+          ${row('발행일', d.issued)}
+          ${row('자료유형', d.type)}
+          ${row('기준일자', d.baseDate)}
+        </dl>
+        ${d.content ? `<div class="content">${esc(d.content)}</div>` : ''}
+        <div class="actions">
+          <a class="btn" target="_blank" rel="noopener" href="${esc(d.url)}">🔗 제주도 상세 페이지</a>
+          <button id="close">닫기</button>
+        </div>`
+      $('overlay').classList.add('open')
+      $('close').onclick = closeDetail
+    }
+    const closeDetail = () => $('overlay').classList.remove('open')
+
+    ;['q', 'region', 'category', 'dir1', 'sort'].forEach((id) => $(id).addEventListener('input', () => { render(); refreshFavButtons() }))
+    $('list').addEventListener('click', (e) => {
+      if (e.target.closest('[data-fav]')) return // 찜 버튼은 아래 공통 처리기에서
+      const card = e.target.closest('.card')
+      if (!card) return
+      // 카드를 누르면 지도에서 해당 핀으로 이동해 설명을 띄운다
+      selectPlace(Number(card.dataset.id), true)
+      $('mapbox').scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    $('overlay').addEventListener('click', (e) => { if (e.target === $('overlay')) closeDetail() })
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail() })
+
+    // ======================================================================
+    // 찜 버튼 / 답사 코스 패널
+    // ======================================================================
+    function refreshFavButtons() {
+      document.querySelectorAll('[data-fav]').forEach((b) => {
+        const on = favs.includes(Number(b.dataset.fav))
+        b.classList.toggle('on', on)
+        b.textContent = b.closest('.infobox') ? (on ? '♥ 코스에서 빼기' : '♡ 코스에 담기') : on ? '♥' : '♡'
+        b.title = on ? '찜 해제' : '찜하기 (답사 코스에 추가)'
+      })
+    }
+
+    function renderCourse() {
+      const list = favs.map(byId).filter(Boolean)
+      const box = $('course')
+      if (list.length === 0) {
+        box.innerHTML = '<h3>🧭 나만의 답사 코스</h3><p class="hint">카드나 핀 설명의 ♡ 를 눌러 가고 싶은 곳을 찜하면, 찜한 순서대로 지도에 선으로 이어져요.</p>'
+        return
+      }
+      let total = 0
+      const items = list.map((d, i) => {
+        const leg = i > 0 ? distKm(list[i - 1], d) : 0
+        total += leg
+        return `<li data-id="${d.id}">
+          <span class="no">${i + 1}</span>
+          <span class="nm" data-go="${d.id}">${esc(d.name)}</span>
+          <span class="leg">${i > 0 ? '+' + leg.toFixed(1) + 'km' : '출발'}</span>
+          <button data-up="${d.id}" title="앞으로" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button data-down="${d.id}" title="뒤로" ${i === list.length - 1 ? 'disabled' : ''}>↓</button>
+          <button data-del="${d.id}" title="코스에서 빼기">✕</button>
+        </li>`
+      }).join('')
+      box.innerHTML = `<h3>🧭 나만의 답사 코스 <small>${list.length}곳 · 직선거리 합계 약 ${total.toFixed(1)}km</small></h3>
+        <ol>${items}</ol>
+        <div class="acts"><button id="courseFit">코스 전체 보기</button><button id="courseClear" class="ghost">코스 비우기</button></div>`
+    }
+
+    function refreshFavUI() {
+      saveFavs()
+      refreshFavButtons()
+      renderCourse()
+      draw()
+    }
+
+    // 찜 버튼 (카드, 핀 설명 공통)
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-fav]')
+      if (!b) return
+      const id = Number(b.dataset.fav)
+      favs = favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id]
+      refreshFavUI()
+    })
+
+    // 코스 패널: 순서 바꾸기 / 빼기 / 이동
+    $('course').addEventListener('click', (e) => {
+      const t = e.target
+      const num = (a) => Number(t.getAttribute(a))
+      const move = (id, dir) => {
+        const i = favs.indexOf(id), j = i + dir
+        if (i < 0 || j < 0 || j >= favs.length) return
+        ;[favs[i], favs[j]] = [favs[j], favs[i]]
+        refreshFavUI()
+      }
+      if (t.hasAttribute('data-up')) move(num('data-up'), -1)
+      else if (t.hasAttribute('data-down')) move(num('data-down'), 1)
+      else if (t.hasAttribute('data-del')) { favs = favs.filter((x) => x !== num('data-del')); refreshFavUI() }
+      else if (t.hasAttribute('data-go')) { selectPlace(num('data-go'), true); $('mapbox').scrollIntoView({ behavior: 'smooth', block: 'center' }) }
+      else if (t.id === 'courseClear') { favs = []; refreshFavUI() }
+      else if (t.id === 'courseFit') {
+        const list = favs.map(byId).filter(Boolean)
+        if (!list.length) return
+        const { w, h } = size()
+        const xs = list.map((d) => d.x), ys = list.map((d) => d.y)
+        view.cx = (Math.min(...xs) + Math.max(...xs)) / 2
+        view.cy = (Math.min(...ys) + Math.max(...ys)) / 2 + 1
+        view.k = Math.min((w - 120) / Math.max(Math.max(...xs) - Math.min(...xs), 0.5), (h - 140) / Math.max(Math.max(...ys) - Math.min(...ys), 0.5), 250)
+        draw()
+        $('mapbox').scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    })
+
+    render()
+    refreshFavButtons()
+    renderCourse()
+    })().catch((e) => {
+      console.error(e)
+      document.body.insertAdjacentHTML('afterbegin', '<p style="padding:1rem;color:#c92a2a">화면을 만드는 중 오류가 났어요: ' + String(e.message || e) + '</p>')
+    })
+  </script>
+</body>
+</html>

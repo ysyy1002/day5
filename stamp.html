@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>제주 역사문화 스탬프 투어</title>
+  <style>
+    :root { --ink: #c92a2a; --gold: #f59f00; --accent: #0e8f9c; --accent-dark: #0a6f79; --bg: #f6f3ea; --card: #fffdf8; --line: #e6dfcf; --muted: #7a7260; --purple: #7048e8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, 'Malgun Gothic', sans-serif; background: var(--bg); color: #2b2a26; line-height: 1.55; }
+    button { font: inherit; cursor: pointer; padding: .5em .9em; border: 1px solid transparent; border-radius: 10px; background: var(--accent); color: #fff; }
+    button:hover:not(:disabled) { background: var(--accent-dark); }
+    button:disabled { opacity: .5; cursor: default; }
+    input, select { font: inherit; padding: .5em .7em; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: inherit; }
+    a { color: var(--accent-dark); }
+
+    header { padding: 1.6rem 1rem 1.2rem; background: linear-gradient(135deg, #b02a37, #e8590c); color: #fff; text-align: center; }
+    header h1 { margin: 0; font-size: 1.7rem; letter-spacing: .02em; }
+    header p { margin: .2rem 0 .9rem; opacity: .92; }
+    .passport { max-width: 640px; margin: 0 auto; padding: .8rem 1.1rem; background: rgba(255,255,255,.16); border-radius: 14px; text-align: left; }
+    .passport .row { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+    .passport .lv { font-weight: 700; font-size: 1.05rem; }
+    .bar { height: 12px; margin: .45rem 0; background: rgba(255,255,255,.3); border-radius: 999px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffe066, #fcc419); border-radius: 999px; transition: width .6s; }
+    .passport small { opacity: .92; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 1rem 1rem 3rem; }
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .tab { background: #fff; color: #2b2a26; border: 1px solid var(--line); }
+    .tab:hover:not(:disabled) { background: #fff4e0; }
+    .tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .tab.on:hover:not(:disabled) { background: var(--ink); }
+    section[hidden] { display: none; }
+
+    .filters { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .6rem; }
+    .filters input[type=search] { flex: 1; min-width: 180px; }
+    .filters label { display: flex; align-items: center; gap: .3rem; font-size: .9rem; }
+
+    .mapbox { position: relative; height: 480px; overflow: hidden; background: #e7f1f4; border: 1px solid var(--line); border-radius: 14px; user-select: none; }
+    .mapbox svg { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+    .mapbox svg.drag { cursor: grabbing; }
+    .map-ctrl { position: absolute; top: .6rem; right: .6rem; display: flex; flex-direction: column; gap: .3rem; }
+    .map-ctrl button { padding: .25em .6em; background: #fff; color: #2b2a26; border: 1px solid var(--line); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .map-ctrl button:hover { background: #fff4e0; }
+    .legend { position: absolute; left: .6rem; bottom: .6rem; padding: .35rem .7rem; background: rgba(255,255,255,.93); border-radius: 8px; font-size: .8rem; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .legend i { display: inline-block; width: .7rem; height: .7rem; margin: 0 .25rem 0 .6rem; border-radius: 50%; vertical-align: -1px; }
+    .legend i:first-child { margin-left: 0; }
+    .infobox { position: absolute; top: .6rem; left: .6rem; width: min(330px, calc(100% - 4.5rem)); max-height: calc(100% - 1.2rem); overflow-y: auto; padding: .85rem 1rem; background: var(--card); border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.28); display: none; }
+    .infobox.open { display: block; }
+    .infobox h4 { margin: 0 0 .25rem; font-size: 1.05rem; padding-right: 1.5rem; }
+    .infobox p { margin: .3rem 0; font-size: .86rem; }
+    .infobox .x { position: absolute; top: .3rem; right: .4rem; padding: .05em .45em; background: transparent; color: var(--muted); font-size: 1.1rem; }
+    .infobox .x:hover:not(:disabled) { background: #f1ecdd; }
+    .infobox .acts { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
+    .infobox .acts button { padding: .3em .8em; font-size: .85rem; }
+
+    .recommend { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .7rem 0 0; padding: .7rem 1rem; background: #fff3bf; border: 1px solid #ffe066; border-radius: 12px; font-size: .92rem; }
+    .recommend button { background: #e67700; padding: .3em .8em; font-size: .88rem; }
+
+    .tag { display: inline-block; margin: 0 .3rem .2rem 0; padding: .05rem .55rem; border-radius: 999px; background: #e3f3f1; color: var(--accent-dark); font-size: .78rem; }
+    .tag.ok { background: #d3f9d8; color: #2b8a3e; }
+
+    /* 스탬프북 */
+    .book { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; }
+    .slot { display: flex; flex-direction: column; align-items: center; padding: .8rem .5rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; text-align: center; cursor: pointer; transition: transform .15s; }
+    .slot:hover { transform: translateY(-3px); }
+    .seal { display: grid; place-items: center; width: 88px; height: 88px; border-radius: 50%; font-size: 2.2rem; border: 3px dashed #cfc8b4; color: #c5bfae; background: #f4f0e4; }
+    .slot.on .seal { border: 4px double var(--ink); color: var(--ink); background: #fff5f5; transform: rotate(-8deg); box-shadow: inset 0 0 0 3px rgba(201,42,42,.12); }
+    .slot h4 { margin: .5rem 0 .1rem; font-size: .92rem; }
+    .slot small { color: var(--muted); font-size: .75rem; }
+    .slot.off h4 { color: #9a937f; }
+
+    /* 배지/코스 */
+    h2.sec { margin: 1.2rem 0 .6rem; font-size: 1.15rem; }
+    .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .7rem; }
+    .badge { padding: .8rem .6rem; text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+    .badge .ic { font-size: 2.2rem; line-height: 1.2; }
+    .badge h4 { margin: .2rem 0 0; font-size: .9rem; }
+    .badge small { color: var(--muted); font-size: .76rem; }
+    .badge.off .ic { filter: grayscale(1); opacity: .35; }
+    .badge.on { border-color: var(--gold); background: #fff9e6; }
+    .courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .8rem; }
+    .course { padding: .9rem 1rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+    .course h4 { margin: 0 0 .3rem; }
+    .course .bar { background: #e9e4d3; }
+    .course .bar i { background: linear-gradient(90deg, #ff922b, #e8590c); }
+    .course button { margin-top: .3rem; padding: .25em .7em; font-size: .85rem; }
+
+    .overlay { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,.5); }
+    .overlay.open { display: flex; }
+    .modal { position: relative; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; padding: 1.4rem; background: var(--card); border-radius: 16px; }
+    .modal h2 { margin: 0 0 .3rem; }
+    .modal .x { position: absolute; top: .5rem; right: .6rem; background: transparent; color: var(--muted); font-size: 1.3rem; padding: .1em .45em; }
+    .modal .x:hover:not(:disabled) { background: #f1ecdd; }
+    .modal .story { white-space: pre-wrap; padding: .8rem; background: #f7f3e6; border-radius: 10px; font-size: .92rem; }
+    .modal .locked { color: var(--muted); font-size: .85rem; }
+    .quiz-q { margin: .7rem 0; font-weight: 700; }
+    .opts { display: grid; gap: .45rem; }
+    .opts button { text-align: left; background: #fff; color: #2b2a26; border: 1px solid var(--line); }
+    .opts button:hover:not(:disabled) { background: #fff4e0; }
+    .opts button.wrong { background: #ffe3e3; color: #a61e1e; border-color: #ffa8a8; }
+    .msg { min-height: 1.4em; margin: .5rem 0 0; font-size: .9rem; color: var(--muted); }
+    .msg.bad { color: #c92a2a; }
+    .or { margin: .9rem 0 .3rem; text-align: center; color: var(--muted); font-size: .85rem; }
+    .gps { width: 100%; background: #2f9e44; }
+    .gps:hover:not(:disabled) { background: #237a35; }
+    .reward { text-align: center; }
+    .reward .big { display: inline-grid; place-items: center; width: 150px; height: 150px; margin: .5rem 0; border-radius: 50%; border: 6px double var(--ink); color: var(--ink); background: #fff5f5; font-size: 4rem; animation: slam .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+    @keyframes slam { from { transform: scale(3) rotate(25deg); opacity: 0; } to { transform: scale(1) rotate(-8deg); opacity: 1; } }
+
+    .toast-wrap { position: fixed; top: .8rem; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; gap: .4rem; align-items: center; pointer-events: none; }
+    .toast { padding: .6rem 1.1rem; background: #2b2a26; color: #fff; border-radius: 999px; box-shadow: 0 4px 16px rgba(0,0,0,.3); animation: pop .3s both; }
+    .toast.gold { background: #e67700; }
+    @keyframes pop { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .empty { padding: 2rem; text-align: center; color: var(--muted); }
+    footer { padding: 1.2rem; text-align: center; color: var(--muted); font-size: .85rem; }
+    footer button { background: transparent; color: var(--muted); border: 1px solid var(--line); font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🏯 제주 역사문화 스탬프 투어</h1>
+    <p>제주 곳곳의 역사문화 장소 120곳, 스탬프를 모아 탐라 마스터가 되어 보세요</p>
+    <div class="passport">
+      <div class="row"><span class="lv" id="level"></span><span id="countText"></span></div>
+      <div class="bar"><i id="progress"></i></div>
+      <small id="nextHint"></small>
+    </div>
+  </header>
+
+  <main>
+    <nav class="tabs">
+      <button class="tab on" data-tab="map">🗺️ 투어 지도</button>
+      <button class="tab" data-tab="book">📖 스탬프북</button>
+      <button class="tab" data-tab="badge">🏅 배지 · 테마 코스</button>
+    </nav>
+
+    <!-- 투어 지도 -->
+    <section id="tab-map">
+      <div class="filters">
+        <input id="q" type="search" placeholder="장소명, 주소, 제목으로 검색" />
+        <select id="fRegion"><option value="">전체 지역</option></select>
+        <select id="fTheme"><option value="">전체 테마</option></select>
+        <label><input type="checkbox" id="fNew" /> 아직 안 간 곳만</label>
+      </div>
+      <div class="mapbox" id="mapbox">
+        <svg id="map" role="img" aria-label="스탬프 투어 지도"></svg>
+        <div class="map-ctrl"><button id="zin" title="확대">＋</button><button id="zout" title="축소">－</button><button id="zfit" title="전체 보기">⤢</button></div>
+        <div class="legend"><i style="background:#868e96"></i>미방문<i style="background:var(--gold)"></i>스탬프 획득<i style="background:var(--purple)"></i>내 이동 경로</div>
+        <div class="infobox" id="infobox"></div>
+      </div>
+      <div class="recommend" id="recommend"></div>
+    </section>
+
+    <!-- 스탬프북 -->
+    <section id="tab-book" hidden>
+      <div class="filters">
+        <input id="bq" type="search" placeholder="스탬프북에서 장소 검색" />
+        <select id="bStatus">
+          <option value="all">전체</option>
+          <option value="on">획득한 스탬프</option>
+          <option value="off">아직 없는 스탬프</option>
+        </select>
+        <span id="bCount" style="color:var(--muted);font-size:.9rem"></span>
+      </div>
+      <div class="book" id="book"></div>
+    </section>
+
+    <!-- 배지 / 코스 -->
+    <section id="tab-badge" hidden>
+      <h2 class="sec">🏅 획득 배지 <small id="badgeCount" style="color:var(--muted);font-weight:normal"></small></h2>
+      <div class="badges" id="badges"></div>
+      <h2 class="sec">🧭 테마 코스 (같은 테마 장소를 모두 찍으면 배지!)</h2>
+      <div class="courses" id="courses"></div>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+  <div class="toast-wrap" id="toasts"></div>
+
+  <footer>
+    데이터 출처: 제주특별자치도 · 제주역사문화 위치정보 / 일반정보 (2022-12-09) · <a href="index.html">전체 조회 화면</a><br />
+    <button id="reset">스탬프 기록 초기화</button>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="api.js"></script>
+  <script src="coast.js"></script>
+  <script>
+    // 데이터는 api.js 가 가져와요 (API 우선, 실패하면 data.js). 가져온 뒤에 화면을 만든다.
+    ;(async () => {
+    const RAW = await JejuApi.load()
+    // =====================================================================
+    // 데이터 준비 (CSV 2개를 합친 data.js + 해안선 coast.js)
+    // =====================================================================
+    const raw = RAW
+    const $ = (id) => document.getElementById(id)
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+    // 테마 = 디렉토리1. 장소가 3곳 미만인 테마는 '기타'로 합친다.
+    const themeCount = raw.reduce((a, d) => ((a[d.dir1] = (a[d.dir1] || 0) + 1), a), {})
+    const EMOJI = { 자연: '🌿', 사회: '🏘️', 의식주: '🍲', 기타: '📜', 관광: '🧳', 무속: '🔮', 역사: '🏛️', 생산기술: '⚒️', 통과의례: '🎎', 민간신앙: '⛩️', 문화: '🎭' }
+    const data = raw.map((d) => {
+      const theme = themeCount[d.dir1] >= 3 ? d.dir1 : '기타'
+      return { ...d, theme, region: (d.address.match(/(제주시|서귀포시)/) || ['기타'])[0], emoji: EMOJI[theme] || '📍' }
+    })
+    const byId = (id) => data.find((d) => d.id === id)
+    const themes = [...new Set(data.map((d) => d.theme))]
+    const themeTotal = Object.fromEntries(themes.map((t) => [t, data.filter((d) => d.theme === t).length]))
+    const regions = ['제주시', '서귀포시']
+
+    // =====================================================================
+    // 스탬프 기록 (이 브라우저에 저장)
+    // =====================================================================
+    const KEY = 'jeju-stamp-tour-v1'
+    let stamps = (() => {
+      try {
+        const s = JSON.parse(localStorage.getItem(KEY) || '{}')
+        return Object.fromEntries(Object.entries(s).filter(([id]) => byId(Number(id))))
+      } catch { return {} }
+    })()
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(stamps)) } catch { /* 저장 불가여도 동작 */ } }
+    const has = (id) => Boolean(stamps[id])
+    const stampedList = () => Object.entries(stamps).map(([id, s]) => ({ d: byId(Number(id)), at: s.at })).sort((a, b) => a.at.localeCompare(b.at))
+    const countOf = () => Object.keys(stamps).length
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+
+    const LEVELS = [
+      [0, '🌱 새내기 탐방객'], [5, '🥾 올레 걷는 나그네'], [15, '🧭 탐라 탐험가'], [30, '📜 역사 지킴이'],
+      [60, '🎓 탐라 학자'], [100, '🏆 탐라 대장'], [120, '👑 탐라 마스터'],
+    ]
+    const levelOf = (n) => [...LEVELS].reverse().find(([min]) => n >= min)
+
+    // 배지 정의: 스탬프 개수 / 테마 완주 / 지역 완주
+    function badgeDefs() {
+      const owned = (pred) => data.filter(pred).filter((d) => has(d.id)).length
+      const list = [
+        ...[[10, '🥉', '스탬프 10개'], [30, '🥈', '스탬프 30개'], [60, '🥇', '스탬프 60개'], [120, '👑', '전체 완주']].map(([n, ic, name]) => ({
+          key: 'c' + n, icon: ic, name, cur: countOf(), max: n,
+        })),
+        ...regions.map((r) => ({ key: 'r:' + r, icon: r === '제주시' ? '🏙️' : '🍊', name: `${r} 완주`, cur: owned((d) => d.region === r), max: data.filter((d) => d.region === r).length })),
+        ...themes.map((t) => ({ key: 't:' + t, icon: EMOJI[t] || '📍', name: `${t} 마스터`, cur: owned((d) => d.theme === t), max: themeTotal[t] })),
+      ]
+      return list.map((b) => ({ ...b, on: b.max > 0 && b.cur >= b.max }))
+    }
+    const earnedKeys = () => new Set(badgeDefs().filter((b) => b.on).map((b) => b.key))
+
+    // =====================================================================
+    // 토스트 / 모달
+    // =====================================================================
+    function toast(msg, gold) {
+      const t = document.createElement('div')
+      t.className = 'toast' + (gold ? ' gold' : '')
+      t.textContent = msg
+      $('toasts').append(t)
+      setTimeout(() => t.remove(), 3800)
+    }
+    const openModal = (html) => { $('modal').innerHTML = `<button class="x" data-close title="닫기">×</button>${html}`; $('overlay').classList.add('open') }
+    const closeModal = () => $('overlay').classList.remove('open')
+    $('overlay').addEventListener('click', (e) => { if (e.target === $('overlay') || e.target.closest('[data-close]')) closeModal() })
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal() })
+
+    // =====================================================================
+    // 상단 진행 상황
+    // =====================================================================
+    function renderPassport() {
+      const n = countOf(), total = data.length
+      const [, name] = levelOf(n)
+      $('level').textContent = name
+      $('countText').textContent = `스탬프 ${n} / ${total}  (${Math.round((n / total) * 100)}%)`
+      $('progress').style.width = (n / total) * 100 + '%'
+      const next = LEVELS.find(([min]) => min > n)
+      $('nextHint').textContent = next ? `다음 등급 「${next[1]}」까지 ${next[0] - n}개 남았어요` : '모든 스탬프를 모았어요! 축하합니다 🎉'
+    }
+
+    // =====================================================================
+    // 지도 (CSV 좌표 + coast.js 해안선으로 SVG에 직접 그림)
+    // =====================================================================
+    const NS = 'http://www.w3.org/2000/svg'
+    const svg = $('map')
+    const LAT0 = 33.38, LNG0 = 126.55, KM_LAT = 110.57
+    const KM_LNG = 111.32 * Math.cos((LAT0 * Math.PI) / 180)
+    data.forEach((d) => { d.x = (d.lng - LNG0) * KM_LNG; d.y = (d.lat - LAT0) * KM_LAT })
+    const coast = (window.JEJU_COAST || []).map((ring) => ring.map(([lng, lat]) => [(lng - LNG0) * KM_LNG, (lat - LAT0) * KM_LAT]))
+    const view = { cx: 0, cy: 0, k: 5 }
+    let shown = data
+    let selectedId = null
+    const K_MIN = 2, K_MAX = 900
+
+    const size = () => ({ w: svg.clientWidth || 800, h: svg.clientHeight || 480 })
+    const toScreen = (x, y) => { const { w, h } = size(); return [w / 2 + (x - view.cx) * view.k, h / 2 - (y - view.cy) * view.k] }
+    const toWorld = (px, py) => { const { w, h } = size(); return [view.cx + (px - w / 2) / view.k, view.cy - (py - h / 2) / view.k] }
+    const el = (name, attrs = {}, text) => {
+      const n = document.createElementNS(NS, name)
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v)
+      if (text !== undefined) n.textContent = text
+      return n
+    }
+    const niceStep = (t) => [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50].find((s) => s >= t) || 50
+    const distKm = (a, b) => {
+      const R = 6371, rad = Math.PI / 180
+      const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad
+      const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2
+      return 2 * R * Math.asin(Math.sqrt(s))
+    }
+
+    function draw() {
+      const { w, h } = size()
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+      svg.replaceChildren()
+
+      // 육지
+      const land = coast.map((ring) => 'M' + ring.map(([x, y]) => toScreen(x, y).map((v) => v.toFixed(1)).join(',')).join('L') + 'Z').join('')
+      svg.append(el('path', { d: land, fill: '#e3efcf', stroke: '#7ea45f', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }))
+
+      // 눈금선
+      const [minX, maxY] = toWorld(0, 0), [maxX, minY] = toWorld(w, h)
+      const gx = niceStep(90 / view.k)
+      const grid = el('g')
+      for (let x = Math.ceil(minX / gx) * gx; x <= maxX; x += gx) {
+        const [sx] = toScreen(x, 0)
+        grid.append(el('line', { x1: sx, y1: 0, x2: sx, y2: h, stroke: '#b9d3df', 'stroke-opacity': 0.55 }))
+        grid.append(el('text', { x: sx + 3, y: h - 6, fill: '#7a8e9b', 'font-size': 10 }, `${(LNG0 + x / KM_LNG).toFixed(2)}°E`))
+      }
+      for (let y = Math.ceil(minY / gx) * gx; y <= maxY; y += gx) {
+        const [, sy] = toScreen(0, y)
+        grid.append(el('line', { x1: 0, y1: sy, x2: w, y2: sy, stroke: '#b9d3df', 'stroke-opacity': 0.55 }))
+        grid.append(el('text', { x: 4, y: sy - 3, fill: '#7a8e9b', 'font-size': 10 }, `${(LAT0 + y / KM_LAT).toFixed(2)}°N`))
+      }
+      svg.append(grid)
+
+      // 내 이동 경로: 스탬프를 찍은 순서대로 연결
+      const trail = stampedList().map((s) => toScreen(s.d.x, s.d.y))
+      if (trail.length >= 2) {
+        const pts = trail.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')
+        svg.append(el('polyline', { points: pts, fill: 'none', stroke: '#fff', 'stroke-width': 6, opacity: 0.8, 'stroke-linejoin': 'round' }))
+        svg.append(el('polyline', { points: pts, fill: 'none', stroke: '#7048e8', 'stroke-width': 3, 'stroke-dasharray': '8 6', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }))
+      }
+
+      // 핀: 미방문은 회색, 획득은 금색. 선택된 핀을 맨 위로.
+      const pins = el('g')
+      const ordered = [...shown].sort((a, b) => (a.id === selectedId) - (b.id === selectedId) || has(a.id) - has(b.id))
+      for (const d of ordered) {
+        const [sx, sy] = toScreen(d.x, d.y)
+        if (sx < -20 || sx > w + 20 || sy < -30 || sy > h + 20) continue
+        const got = has(d.id), sel = d.id === selectedId
+        const g = el('g', { transform: `translate(${sx},${sy}) scale(${sel ? 1.35 : 1})`, style: 'cursor:pointer', 'data-id': d.id })
+        g.append(el('path', { d: 'M0 0 C-7 -9 -9 -13 -9 -17 A9 9 0 1 1 9 -17 C9 -13 7 -9 0 0Z', fill: got ? '#f59f00' : '#868e96', stroke: '#fff', 'stroke-width': 1.5 }))
+        g.append(el('circle', { cx: 0, cy: -17, r: 5.2, fill: '#fff' }))
+        if (got) g.append(el('text', { x: 0, y: -13.4, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 'bold', fill: '#e67700' }, '★'))
+        g.append(el('title', {}, d.name + (got ? ' (스탬프 획득)' : '')))
+        pins.append(g)
+      }
+      svg.append(pins)
+
+      if (view.k > 60) {
+        for (const d of shown) {
+          const [sx, sy] = toScreen(d.x, d.y)
+          if (sx < 0 || sx > w || sy < 0 || sy > h) continue
+          svg.append(el('text', { x: sx + 11, y: sy - 8, 'font-size': 11, fill: '#2b2a26', stroke: '#fff', 'stroke-width': 3, 'paint-order': 'stroke' }, d.name))
+        }
+      }
+
+      // 나침반 + 축척
+      const north = el('g', { transform: `translate(${w - 28},${h - 40})` })
+      north.append(el('path', { d: 'M0 -14 L7 8 L0 3 L-7 8Z', fill: '#37474f' }))
+      north.append(el('text', { y: -18, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 'bold', fill: '#37474f' }, 'N'))
+      svg.append(north)
+      const km = niceStep(110 / view.k), bar = km * view.k
+      const sb = el('g', { transform: `translate(${w - bar - 56},${h - 14})` })
+      sb.append(el('path', { d: `M0 -5 V0 H${bar} V-5`, fill: 'none', stroke: '#37474f', 'stroke-width': 2 }))
+      sb.append(el('text', { x: bar / 2, y: -8, 'text-anchor': 'middle', 'font-size': 11, fill: '#37474f' }, `${km} km`))
+      svg.append(sb)
+
+      if (shown.length === 0) svg.append(el('text', { x: w / 2, y: h / 2, 'text-anchor': 'middle', 'font-size': 16, fill: '#7a8e9b' }, '조건에 맞는 장소가 없어요'))
+    }
+
+    function fit() {
+      const { w, h } = size()
+      if (shown.length === 0) return draw()
+      const extra = shown.length === data.length ? coast.flat() : []
+      const xs = [...shown.map((d) => d.x), ...extra.map((p) => p[0])]
+      const ys = [...shown.map((d) => d.y), ...extra.map((p) => p[1])]
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
+      view.cx = (x0 + x1) / 2
+      view.cy = (y0 + y1) / 2 + 1
+      view.k = Math.min((w - 100) / Math.max(x1 - x0, 0.5), (h - 120) / Math.max(y1 - y0, 0.5), 250)
+      draw()
+    }
+    function zoomAt(f, px, py) {
+      const { w, h } = size()
+      px ??= w / 2; py ??= h / 2
+      const [wx, wy] = toWorld(px, py)
+      view.k = Math.min(K_MAX, Math.max(K_MIN, view.k * f))
+      view.cx = wx - (px - w / 2) / view.k
+      view.cy = wy + (py - h / 2) / view.k
+      draw()
+    }
+
+    let drag = null
+    svg.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false } })
+    svg.addEventListener('pointermove', (e) => {
+      if (!drag) return
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y
+      if (!drag.moved && Math.hypot(dx, dy) < 4) return
+      drag.moved = true
+      svg.classList.add('drag')
+      view.cx = drag.cx - dx / view.k
+      view.cy = drag.cy + dy / view.k
+      draw()
+    })
+    window.addEventListener('pointerup', (e) => {
+      const click = drag && !drag.moved
+      svg.classList.remove('drag')
+      drag = null
+      if (click) {
+        const pin = e.target.closest && e.target.closest('[data-id]')
+        if (pin && svg.contains(pin)) selectPlace(Number(pin.dataset.id), false)
+      }
+    })
+    svg.addEventListener('wheel', (e) => {
+      e.preventDefault()
+      const r = svg.getBoundingClientRect()
+      zoomAt(e.deltaY < 0 ? 1.25 : 0.8, e.clientX - r.left, e.clientY - r.top)
+    }, { passive: false })
+    $('zin').onclick = () => zoomAt(1.5)
+    $('zout').onclick = () => zoomAt(1 / 1.5)
+    $('zfit').onclick = () => { closeInfo(); fit() }
+    window.addEventListener('resize', () => { if (!$('tab-map').hidden) draw() })
+
+    // 핀 설명 상자
+    function selectPlace(id, center) {
+      const d = byId(id)
+      if (!d) return
+      selectedId = id
+      const got = stamps[id]
+      $('infobox').innerHTML = `
+        <button class="x" id="infoClose" title="닫기">×</button>
+        <h4>${d.emoji} ${esc(d.name)}</h4>
+        <div>${[d.theme, d.dir2 !== '해당없음' ? d.dir2 : '', d.region].filter(Boolean).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}${got ? '<span class="tag ok">스탬프 획득</span>' : ''}</div>
+        <p><b>${esc(d.title)}</b></p>
+        <p>📍 ${esc(d.address)}</p>
+        ${got ? `<p>🗓️ ${fmtDate(got.at)} 획득</p>` : ''}
+        <div class="acts">
+          ${got ? '' : `<button data-stamp="${id}">🖋️ 스탬프 찍기</button>`}
+          <button data-detail="${id}" style="background:#fff;color:#2b2a26;border:1px solid var(--line)">이야기 보기</button>
+        </div>`
+      $('infobox').classList.add('open')
+      $('infoClose').onclick = closeInfo
+      if (center) {
+        view.cx = d.x; view.cy = d.y; view.k = Math.max(view.k, 80)
+        view.cx -= (size().w * 0.15) / view.k
+      }
+      draw()
+    }
+    function closeInfo() { selectedId = null; $('infobox').classList.remove('open'); draw() }
+
+    // 가까운 미방문 장소 추천 (마지막으로 찍은 곳 기준, 없으면 제주 중심)
+    function renderRecommend() {
+      const list = stampedList()
+      const from = list.length ? list[list.length - 1].d : { lat: LAT0, lng: LNG0 }
+      const todo = data.filter((d) => !has(d.id))
+      if (todo.length === 0) { $('recommend').innerHTML = '🎉 모든 스탬프를 모았어요!'; return }
+      const near = todo.map((d) => ({ d, km: distKm(from, d) })).sort((a, b) => a.km - b.km)[0]
+      $('recommend').innerHTML = `🧭 ${list.length ? `마지막으로 찍은 「${esc(list[list.length - 1].d.name)}」에서` : '제주 중심에서'} 가장 가까운 미방문 장소:
+        <b>${esc(near.d.name)}</b> (${near.km.toFixed(1)}km)
+        <button data-go="${near.d.id}">지도에서 보기</button>`
+    }
+
+    // 지도 필터
+    function applyMapFilter() {
+      const q = $('q').value.trim().toLowerCase(), fr = $('fRegion').value, ft = $('fTheme').value, onlyNew = $('fNew').checked
+      shown = data.filter((d) => (!fr || d.region === fr) && (!ft || d.theme === ft) && (!onlyNew || !has(d.id)) &&
+        (!q || [d.name, d.address, d.title, d.subject].join(' ').toLowerCase().includes(q)))
+      if (selectedId !== null && !shown.some((d) => d.id === selectedId)) { selectedId = null; $('infobox').classList.remove('open') }
+      fit()
+    }
+    regions.forEach((r) => $('fRegion').insertAdjacentHTML('beforeend', `<option>${r}</option>`))
+    themes.forEach((t) => $('fTheme').insertAdjacentHTML('beforeend', `<option>${esc(t)}</option>`))
+    ;['q', 'fRegion', 'fTheme', 'fNew'].forEach((id) => $(id).addEventListener('input', applyMapFilter))
+
+    // =====================================================================
+    // 스탬프북
+    // =====================================================================
+    function renderBook() {
+      const q = $('bq').value.trim().toLowerCase(), st = $('bStatus').value
+      const rows = data.filter((d) => (st === 'all' || (st === 'on') === has(d.id)) && (!q || [d.name, d.address, d.title].join(' ').toLowerCase().includes(q)))
+        .sort((a, b) => (has(b.id) - has(a.id)) || a.name.localeCompare(b.name, 'ko'))
+      $('bCount').textContent = `${rows.length}개 표시 · 획득 ${countOf()}개`
+      $('book').innerHTML = rows.length ? rows.map((d) => {
+        const got = stamps[d.id]
+        return `<div class="slot ${got ? 'on' : 'off'}" data-detail="${d.id}">
+          <div class="seal">${got ? d.emoji : '？'}</div>
+          <h4>${esc(d.name)}</h4>
+          <small>${got ? fmtDate(got.at) : '아직 못 찍었어요'}</small>
+        </div>`
+      }).join('') : '<p class="empty">조건에 맞는 스탬프가 없어요.</p>'
+    }
+    ;['bq', 'bStatus'].forEach((id) => $(id).addEventListener('input', renderBook))
+
+    // =====================================================================
+    // 배지 / 테마 코스
+    // =====================================================================
+    function renderBadges() {
+      const defs = badgeDefs()
+      $('badgeCount').textContent = `${defs.filter((b) => b.on).length} / ${defs.length}`
+      $('badges').innerHTML = defs.map((b) => `<div class="badge ${b.on ? 'on' : 'off'}">
+        <div class="ic">${b.icon}</div><h4>${esc(b.name)}</h4><small>${b.on ? '획득 완료!' : `${b.cur} / ${b.max}`}</small></div>`).join('')
+
+      $('courses').innerHTML = themes.map((t) => {
+        const cur = data.filter((d) => d.theme === t && has(d.id)).length, max = themeTotal[t]
+        return `<div class="course"><h4>${EMOJI[t] || '📍'} ${esc(t)} 코스</h4>
+          <div class="bar"><i style="width:${(cur / max) * 100}%"></i></div>
+          <small>${cur} / ${max} ${cur === max ? '· 완주!' : ''}</small><br />
+          <button data-course="${esc(t)}">이 테마만 지도에서 보기</button></div>`
+      }).join('')
+    }
+
+    // =====================================================================
+    // 상세 / 스탬프 찍기 / 퀴즈 / 현장 인증
+    // =====================================================================
+    function openDetail(id) {
+      const d = byId(id)
+      const got = stamps[id]
+      const text = d.content || '등록된 이야기가 없어요.'
+      openModal(`
+        <h2>${d.emoji} ${esc(d.name)}</h2>
+        <div>${[d.category, d.dir1, d.dir2 !== '해당없음' ? d.dir2 : ''].filter(Boolean).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}${got ? `<span class="tag ok">${fmtDate(got.at)} 스탬프 획득</span>` : ''}</div>
+        <p><b>${esc(d.title)}</b>${d.subtitle ? ` <small style="color:var(--muted)">— ${esc(d.subtitle)}</small>` : ''}</p>
+        <p>📍 ${esc(d.address)}</p>
+        ${got
+          ? `<div class="story">${esc(text)}</div>`
+          : `<div class="story">${esc(text.slice(0, 130))}…</div><p class="locked">🔒 스탬프를 찍으면 전체 이야기가 열려요.</p>`}
+        <p style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:0">
+          ${got ? '' : `<button data-stamp="${id}">🖋️ 스탬프 찍기</button>`}
+          <button data-go="${id}" style="background:#fff;color:#2b2a26;border:1px solid var(--line)">🗺️ 지도에서 보기</button>
+          <a href="${esc(d.url)}" target="_blank" rel="noopener" style="align-self:center">제주도 상세 페이지 ↗</a>
+        </p>`)
+    }
+
+    const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] } return a }
+    function makeQuiz(d) {
+      const kinds = ['region', 'theme', 'title']
+      const kind = kinds[Math.floor(Math.random() * kinds.length)]
+      if (kind === 'region' && regions.includes(d.region))
+        return { q: `「${d.name}」은(는) 어느 시에 있을까요?`, options: shuffle(regions), answer: d.region }
+      if (kind === 'title' && d.title) {
+        const others = shuffle([...new Set(data.filter((x) => x.title && x.title !== d.title).map((x) => x.title))]).slice(0, 3)
+        return { q: `「${d.name}」과(와) 관련된 자료의 제목은 무엇일까요?`, options: shuffle([d.title, ...others]), answer: d.title }
+      }
+      const others = shuffle(themes.filter((t) => t !== d.theme)).slice(0, 3)
+      return { q: `「${d.name}」의 테마(디렉토리 분류)는 무엇일까요?`, options: shuffle([d.theme, ...others]), answer: d.theme }
+    }
+
+    function openStamp(id) {
+      const d = byId(id)
+      if (has(id)) return openDetail(id)
+      const quiz = makeQuiz(d)
+      openModal(`
+        <h2>🖋️ ${esc(d.name)} 스탬프 찍기</h2>
+        <p style="margin:.2rem 0;color:var(--muted);font-size:.88rem">📍 ${esc(d.address)}</p>
+        <div class="story">${esc((d.content || '').slice(0, 130))}…<br /><small style="color:var(--muted)">↑ 이 장소의 이야기 힌트</small></div>
+        <div class="quiz-q">🧩 퀴즈: ${esc(quiz.q)}</div>
+        <div class="opts">${quiz.options.map((o, i) => `<button data-opt="${i}">${esc(o)}</button>`).join('')}</div>
+        <p class="msg" id="quizMsg">정답을 맞히면 스탬프가 찍혀요.</p>
+        <div class="or">── 또는 ──</div>
+        <button class="gps" data-gps="${id}">📍 현장 인증 (지금 내 위치가 이 장소 300m 안일 때)</button>
+        <p class="msg" id="gpsMsg"></p>`)
+      $('modal').dataset.quiz = JSON.stringify({ id, answer: quiz.answer, options: quiz.options })
+    }
+
+    function giveStamp(id, how) {
+      if (has(id)) return
+      const before = earnedKeys(), lvBefore = levelOf(countOf())[1]
+      stamps[id] = { at: new Date().toISOString(), how }
+      save()
+      const d = byId(id)
+      const after = earnedKeys(), lvAfter = levelOf(countOf())[1]
+      refreshAll()
+      openModal(`<div class="reward">
+        <h2>🎉 스탬프 획득!</h2>
+        <div class="big">${d.emoji}</div>
+        <h3 style="margin:.2rem 0">${esc(d.name)}</h3>
+        <p style="color:var(--muted);margin:.2rem 0">${how === 'gps' ? '현장 인증 완료' : '퀴즈 정답'} · 전체 ${countOf()} / ${data.length}</p>
+        <div class="story" style="text-align:left;max-height:220px;overflow:auto">${esc(d.content)}</div>
+        <p style="margin-bottom:0"><button data-close>계속하기</button></p></div>`)
+      const newBadges = badgeDefs().filter((b) => after.has(b.key) && !before.has(b.key))
+      newBadges.forEach((b, i) => setTimeout(() => toast(`${b.icon} 배지 획득: ${b.name}`, true), 600 + i * 700))
+      if (lvAfter !== lvBefore) setTimeout(() => toast(`🎖️ 등급 상승! ${lvAfter}`, true), 600 + newBadges.length * 700)
+    }
+
+    // 모달 안의 클릭 처리 (퀴즈 보기, 현장 인증)
+    $('modal').addEventListener('click', (e) => {
+      const opt = e.target.closest('[data-opt]')
+      if (opt) {
+        const quiz = JSON.parse($('modal').dataset.quiz || '{}')
+        const chosen = quiz.options[Number(opt.dataset.opt)]
+        if (chosen === quiz.answer) giveStamp(quiz.id, 'quiz')
+        else { opt.classList.add('wrong'); opt.disabled = true; const m = $('quizMsg'); m.textContent = '아쉬워요! 힌트를 다시 읽고 도전해 보세요.'; m.className = 'msg bad' }
+        return
+      }
+      const gps = e.target.closest('[data-gps]')
+      if (gps) {
+        const id = Number(gps.dataset.gps), d = byId(id), m = $('gpsMsg')
+        m.className = 'msg'
+        if (!navigator.geolocation) { m.textContent = '이 브라우저는 위치 기능을 지원하지 않아요. 퀴즈로 도전해 보세요.'; return }
+        m.textContent = '내 위치를 확인하는 중…'
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const km = distKm({ lat: pos.coords.latitude, lng: pos.coords.longitude }, d)
+            if (km <= 0.3) giveStamp(id, 'gps')
+            else { m.className = 'msg bad'; m.textContent = `현재 위치에서 ${km < 1 ? Math.round(km * 1000) + 'm' : km.toFixed(1) + 'km'} 떨어져 있어요. 장소 300m 안에서 다시 시도해 주세요.` }
+          },
+          () => { m.className = 'msg bad'; m.textContent = '위치를 가져오지 못했어요. (권한 허용이 필요해요) 퀴즈로 도전해 보세요.' },
+          { enableHighAccuracy: true, timeout: 8000 },
+        )
+      }
+    })
+
+    // =====================================================================
+    // 공통 클릭 처리 (data-* 속성), 탭, 초기화
+    // =====================================================================
+    function showTab(name) {
+      document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === name))
+      ;['map', 'book', 'badge'].forEach((t) => { $('tab-' + t).hidden = t !== name })
+      if (name === 'map') draw()
+      if (name === 'book') renderBook()
+      if (name === 'badge') renderBadges()
+    }
+    function goMap(id) {
+      closeModal()
+      showTab('map')
+      selectPlace(id, true)
+      $('mapbox').scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    function refreshAll() {
+      renderPassport()
+      renderRecommend()
+      renderBook()
+      renderBadges()
+      if (selectedId !== null) selectPlace(selectedId, false)
+      else draw()
+    }
+
+    document.addEventListener('click', (e) => {
+      const t = e.target
+      const tab = t.closest('[data-tab]')
+      if (tab) return showTab(tab.dataset.tab)
+      if (t.closest('#modal')) {
+        // 모달 안: 스탬프 찍기 / 지도 이동 / 상세
+        const st = t.closest('[data-stamp]'); if (st) return openStamp(Number(st.dataset.stamp))
+        const go = t.closest('[data-go]'); if (go) return goMap(Number(go.dataset.go))
+        return
+      }
+      const st = t.closest('[data-stamp]'); if (st) return openStamp(Number(st.dataset.stamp))
+      const go = t.closest('[data-go]'); if (go) return goMap(Number(go.dataset.go))
+      const dt = t.closest('[data-detail]'); if (dt) return openDetail(Number(dt.dataset.detail))
+      const course = t.closest('[data-course]')
+      if (course) {
+        showTab('map')
+        $('fTheme').value = course.dataset.course
+        $('fRegion').value = ''; $('q').value = ''; $('fNew').checked = false
+        applyMapFilter()
+        $('mapbox').scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    })
+    $('reset').onclick = () => {
+      if (!countOf()) return toast('초기화할 스탬프가 없어요.')
+      if (confirm('지금까지 모은 스탬프를 모두 지울까요? 되돌릴 수 없어요.')) { stamps = {}; save(); refreshAll(); toast('스탬프 기록을 초기화했어요.') }
+    }
+
+    // 시작
+    if (data.length === 0) document.querySelector('main').innerHTML = '<p class="empty">데이터를 불러오지 못했어요. config.js(API 설정)나 data.js(내장 데이터)를 확인하세요.</p>'
+    else { renderPassport(); renderRecommend(); renderBook(); renderBadges(); applyMapFilter() }
+    })().catch((e) => {
+      console.error(e)
+      document.body.insertAdjacentHTML('afterbegin', '<p style="padding:1rem;color:#c92a2a">화면을 만드는 중 오류가 났어요: ' + String(e.message || e) + '</p>')
+    })
+  </script>
+</body>
+</html>
