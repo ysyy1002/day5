@@ -183,7 +183,7 @@
     <button id="reset">스탬프 기록 초기화</button>
   </footer>
 
-  <script src="config.js"></script>
+  
   <script src="data.js"></script>
   <script src="api.js"></script>
   <script src="coast.js"></script>
@@ -671,7 +671,7 @@
     }
 
     // 시작
-    if (data.length === 0) document.querySelector('main').innerHTML = '<p class="empty">데이터를 불러오지 못했어요. config.js(API 설정)나 data.js(내장 데이터)를 확인하세요.</p>'
+    if (data.length === 0) document.querySelector('main').innerHTML = '<p class="empty">데이터를 불러오지 못했어요. API(/api/jeju-culture) 또는 data.js(내장 데이터)를 확인하세요.</p>'
     else { renderPassport(); renderRecommend(); renderBook(); renderBadges(); applyMapFilter() }
     })().catch((e) => {
       console.error(e)

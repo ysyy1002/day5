@@ -118,10 +118,10 @@
 
   <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 
-  <footer>데이터 출처: 제주특별자치도 · 이 폴더의 index.html · config.js · api.js · data.js · coast.js 를 함께 두고 열어주세요.</footer>
+  <footer>데이터 출처: 제주특별자치도 · 이 폴더의 index.html · api.js · data.js · coast.js 를 함께 두고 열어주세요.</footer>
 
   <!-- CSV 2개를 합친 데이터. file:// 로 열어도 불러올 수 있게 script 로 읽어요. -->
-  <script src="config.js"></script>
+  
   <script src="data.js"></script>
   <script src="api.js"></script>
   <script src="coast.js"></script>
@@ -139,7 +139,7 @@
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
     if (data.length === 0) {
-      $('list').innerHTML = '<p class="empty">데이터를 불러오지 못했어요. config.js(API 설정)나 data.js(내장 데이터)를 확인하세요.</p>'
+      $('list').innerHTML = '<p class="empty">데이터를 불러오지 못했어요. API(/api/jeju-culture) 또는 data.js(내장 데이터)를 확인하세요.</p>'
     }
 
     // 선택 상자 채우기
